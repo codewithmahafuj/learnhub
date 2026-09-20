@@ -30,10 +30,10 @@ export default function StudentCourses() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
-              Enrolled Modules
+              Enrolled Courses
             </h2>
             <p className="text-xs text-muted-foreground">
-              A list of course paths registered to your student profile.
+              A list of courses registered to your student profile.
             </p>
           </div>
         </div>

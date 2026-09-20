@@ -27,8 +27,8 @@ export default function StudentBrowse() {
 
         {/* Empty Catalog State */}
         <EmptyState
-          title="Catalog indexing underway"
-          description="New courses are currently being structured and published. Check back soon for catalog exploration."
+          title="No courses available yet"
+          description="New courses are currently being prepared. Check back soon for new learning opportunities."
           className="p-12"
         />
       </div>
