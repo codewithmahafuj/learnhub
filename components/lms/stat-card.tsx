@@ -9,9 +9,10 @@ export interface StatCardProps {
   description?: string;
   icon: React.ComponentType<{ className?: string }>;
   iconClassName?: string;
+  gradientClassName?: string;
   href?: string;
   actionLabel?: string;
-  variant?: "default" | "compact";
+  variant?: "default" | "compact" | "gradient";
   className?: string;
 }
 
@@ -21,11 +22,38 @@ export function StatCard({
   description,
   icon: Icon,
   iconClassName = "bg-primary/10 text-primary",
+  gradientClassName = "from-emerald-500 to-teal-600",
   href,
   actionLabel,
   variant = "default",
   className,
 }: StatCardProps) {
+  // Gradient Variant (Watermark Image Style)
+  if (variant === "gradient") {
+    return (
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-2xl bg-gradient-to-r p-6 text-white shadow-md",
+          gradientClassName,
+          className
+        )}
+      >
+        <div className="relative z-10 space-y-1">
+          <h3 className="text-3xl font-extrabold tracking-tight">{value}</h3>
+          <p className="text-xs font-bold tracking-wider opacity-90 uppercase">
+            {title}
+          </p>
+          {description && (
+            <p className="text-[11px] opacity-80">{description}</p>
+          )}
+        </div>
+        {/* Watermark Big Icon */}
+        <Icon className="absolute -bottom-4 -right-4 h-28 w-28 text-white/20 pointer-events-none" />
+      </div>
+    );
+  }
+
+  // Compact Variant
   if (variant === "compact") {
     return (
       <div
@@ -53,6 +81,7 @@ export function StatCard({
     );
   }
 
+  // Default Variant
   return (
     <div
       className={cn(

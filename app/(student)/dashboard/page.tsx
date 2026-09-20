@@ -40,6 +40,7 @@ export default function StudentDashboard() {
 
   return (
     <PageContainer
+    variant="banner"
       title="Welcome back, Learner! 👋"
       description="Track your learning momentum, jump back into active lessons, or explore new skills."
     >
@@ -47,32 +48,36 @@ export default function StudentDashboard() {
         {/* Top Analytics / Overview Stats */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            variant="compact"
+            variant="gradient"
             title="Enrolled Courses"
             value={4}
             icon={BookOpen}
             iconClassName="bg-primary/10 text-primary"
+            gradientClassName="from-emerald-500 to-teal-600"
           />
           <StatCard
-            variant="compact"
+            variant="gradient"
             title="Hours Spent"
             value="28.5 hrs"
             icon={Clock}
             iconClassName="bg-amber-500/10 text-amber-500"
+            gradientClassName="from-amber-400 to-amber-500"
           />
           <StatCard
-            variant="compact"
+            variant="gradient"
             title="Completed Lessons"
             value={24}
             icon={CheckCircle2}
             iconClassName="bg-emerald-500/10 text-emerald-500"
+            gradientClassName="from-blue-500 to-cyan-500"
           />
           <StatCard
-            variant="compact"
+            variant="gradient"
             title="Certificates Earned"
             value={2}
             icon={Trophy}
             iconClassName="bg-purple-500/10 text-purple-500"
+            gradientClassName="from-purple-600 to-indigo-600"
           />
         </div>
 
@@ -191,3 +196,9 @@ export default function StudentDashboard() {
     </PageContainer>
   );
 }
+
+
+
+
+
+
