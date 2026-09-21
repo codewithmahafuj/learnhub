@@ -4,11 +4,10 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
-import type { Provider } from "next-auth/providers";
 import type { Adapter } from "next-auth/adapters";
 
-import type { Role } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { authConfig } from "./auth.config";
 
 /**
  * LearnHub Auth.js (NextAuth v5) configuration — server-side only.
@@ -19,12 +18,12 @@ import { prisma } from "@/lib/prisma";
  * that OAuth (Step 6+) can persist Account/Session/User records with the exact
  * same setup, and the existing Session model remains ready for that switch.
  *
- * The user's database role (STUDENT | ADMIN) is preserved into the session via
- * the jwt/session callbacks below. passwordHash is NEVER returned from
+ * The shared callbacks live in auth.config.ts (single source of truth, also
+ * used by the proxy's JWT-only instance). passwordHash is NEVER returned from
  * authorize, so it can never reach the cookie or the client.
  */
 
-const providers: Provider[] = [
+const providers = [
   Credentials({
     credentials: {
       email: { label: "Email", type: "email" },
@@ -70,32 +69,7 @@ const providers: Provider[] = [
 ];
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma) as Adapter,
   providers,
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  pages: {
-    // Keep Auth.js defaults for now; a custom branded sign-in page comes with
-    // the login UI step (the existing (auth)/login page is NOT touched here).
-  },
-  callbacks: {
-    /** Copy the DB role (and other claim fields) into the JWT at sign-in. */
-    jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = (user as { role?: Role }).role;
-      }
-      return token;
-    },
-    /** Copy id/role from the JWT into the session object read by the app. */
-    session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as Role;
-      }
-      return session;
-    },
-  },
 });

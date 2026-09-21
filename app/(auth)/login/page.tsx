@@ -3,11 +3,11 @@ import { GraduationCap } from "lucide-react";
 import { LoginForm } from "./login-form";
 
 interface LoginPageProps {
-  searchParams: Promise<{ registered?: string }>;
+  searchParams: Promise<{ registered?: string; callbackUrl?: string }>;
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { registered } = await searchParams;
+  const { registered, callbackUrl } = await searchParams;
 
   return (
     <div className="space-y-6">
@@ -29,7 +29,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </p>
       ) : null}
 
-      <LoginForm />
+      <LoginForm callbackUrl={callbackUrl} />
 
       <div className="relative flex items-center justify-center text-xs uppercase">
         <div className="absolute w-full border-t border-border/50" />

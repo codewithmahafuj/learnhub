@@ -7,7 +7,8 @@ import { loginAction, type LoginState } from "./actions";
 
 const initialState: LoginState = {};
 
-export function LoginForm() {
+/** Optional safe internal destination carried through the sign-in flow. */
+export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
   const [state, formAction, isPending] = useActionState(
     loginAction,
     initialState
@@ -15,6 +16,10 @@ export function LoginForm() {
 
   return (
     <form className="space-y-4" action={formAction}>
+      {callbackUrl ? (
+        <input type="hidden" name="callbackUrl" value={callbackUrl} />
+      ) : null}
+
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider" htmlFor="email">
           Email address

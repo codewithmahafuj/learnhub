@@ -11,11 +11,22 @@ import { signIn } from "@/auth";
  *   action never touches bcrypt or the database directly.
  * - Every failure — unknown email, wrong password, malformed input — returns
  *   the same generic message, so nothing reveals whether an email exists.
- * - On success Auth.js sets the JWT session cookie and we redirect.
+ * - On success Auth.js sets the JWT session cookie and redirects.
+ * - `callbackUrl` is honored only if it is a safe INTERNAL path (open-redirect
+ *   protection); otherwise the default /dashboard is used.
  */
 
 export interface LoginState {
   error?: string;
+}
+
+/** Only relative paths on this origin are safe redirect targets. */
+function isSafeCallbackUrl(url: string): boolean {
+  return (
+    url.startsWith("/") &&
+    !url.startsWith("//") &&
+    !url.startsWith("/\\")
+  );
 }
 
 export async function loginAction(
@@ -26,6 +37,10 @@ export async function loginAction(
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const callbackUrl = String(formData.get("callbackUrl") ?? "");
+  const redirectTo = isSafeCallbackUrl(callbackUrl)
+    ? callbackUrl
+    : "/dashboard";
 
   let redirectError: Error | undefined;
 
@@ -33,7 +48,7 @@ export async function loginAction(
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/dashboard",
+      redirectTo,
     });
   } catch (error) {
     // Next.js redirects are control-flow exceptions — let them through.
@@ -54,5 +69,5 @@ export async function loginAction(
 
   // signIn with redirectTo only returns on failure; success always throws the
   // redirect. This line is unreachable but keeps TypeScript flow analysis happy.
-  redirect("/dashboard");
+  redirect(redirectTo);
 }
