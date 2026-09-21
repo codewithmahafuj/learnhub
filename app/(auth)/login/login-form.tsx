@@ -1,28 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 
-export function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+import { loginAction, type LoginState } from "./actions";
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-  };
+const initialState: LoginState = {};
+
+export function LoginForm() {
+  const [state, formAction, isPending] = useActionState(
+    loginAction,
+    initialState
+  );
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form className="space-y-4" action={formAction}>
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider" htmlFor="email">
           Email address
         </label>
         <input
           id="email"
+          name="email"
           type="email"
           placeholder="name@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
           className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
           required
         />
@@ -36,17 +38,23 @@ export function LoginForm() {
         </div>
         <input
           id="password"
+          name="password"
           type="password"
           placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
           className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
           required
         />
       </div>
 
-      <Button type="submit" className="w-full h-10 font-medium">
-        Sign In
+      {state.error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {state.error}
+        </p>
+      ) : null}
+
+      <Button type="submit" className="w-full h-10 font-medium" disabled={isPending}>
+        {isPending ? "Signing In…" : "Sign In"}
       </Button>
     </form>
   );

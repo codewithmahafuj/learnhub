@@ -1,0 +1,22 @@
+
+> lms@0.1.0 dev
+> next dev -p 3000
+
+▲ Next.js 16.3.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.103:3000
+- Environments: .env
+✓ Ready in 497ms
+✓ Running next.config.ts took 41ms
+
+ GET / 200 in 295ms (next.js: 159ms, application-code: 136ms)
+ GET /register 200 in 94ms (next.js: 33ms, application-code: 61ms)
+ GET /login 200 in 82ms (next.js: 47ms, application-code: 35ms)
+ GET /api/auth/session 200 in 830ms (next.js: 775ms, application-code: 55ms)
+ GET / 200 in 48ms (next.js: 5ms, application-code: 42ms)
+ GET / 200 in 42ms (next.js: 5ms, application-code: 38ms)
+ GET / 200 in 36ms (next.js: 5ms, application-code: 30ms)
+ GET /login 200 in 34ms (next.js: 4ms, application-code: 29ms)
+ GET / 200 in 50ms (next.js: 5ms, application-code: 45ms)
+ GET /dashboard 200 in 136ms (next.js: 28ms, application-code: 108ms)
+ GET /login 200 in 34ms (next.js: 4ms, application-code: 30ms)

@@ -2,7 +2,13 @@ import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { LoginForm } from "./login-form";
 
-export default function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<{ registered?: string }>;
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { registered } = await searchParams;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col items-center text-center space-y-2">
@@ -16,6 +22,12 @@ export default function LoginPage() {
           Enter your email below to sign in to your account
         </p>
       </div>
+
+      {registered ? (
+        <p className="text-sm text-center rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-foreground">
+          Account created successfully. You can now sign in.
+        </p>
+      ) : null}
 
       <LoginForm />
 
@@ -35,4 +47,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

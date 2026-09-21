@@ -1,29 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 
-export function RegisterForm() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+import { registerAction, type RegisterState } from "./actions";
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-  };
+const initialState: RegisterState = {};
+
+export function RegisterForm() {
+  const [state, formAction, isPending] = useActionState(
+    registerAction,
+    initialState
+  );
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form className="space-y-4" action={formAction}>
       <div className="space-y-1.5">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider" htmlFor="name">
           Full name
         </label>
         <input
           id="name"
+          name="name"
           type="text"
           placeholder="John Doe"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          autoComplete="name"
           className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
           required
         />
@@ -35,10 +36,10 @@ export function RegisterForm() {
         </label>
         <input
           id="email"
+          name="email"
           type="email"
           placeholder="name@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
           className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
           required
         />
@@ -50,17 +51,40 @@ export function RegisterForm() {
         </label>
         <input
           id="password"
+          name="password"
           type="password"
           placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          minLength={8}
           className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
           required
         />
       </div>
 
-      <Button type="submit" className="w-full h-10 font-medium">
-        Sign Up
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider" htmlFor="confirmPassword">
+          Confirm password
+        </label>
+        <input
+          id="confirmPassword"
+          name="confirmPassword"
+          type="password"
+          placeholder="••••••••"
+          autoComplete="new-password"
+          minLength={8}
+          className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground"
+          required
+        />
+      </div>
+
+      {state.error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {state.error}
+        </p>
+      ) : null}
+
+      <Button type="submit" className="w-full h-10 font-medium" disabled={isPending}>
+        {isPending ? "Signing Up…" : "Sign Up"}
       </Button>
     </form>
   );
