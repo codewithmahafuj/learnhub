@@ -1,0 +1,244 @@
+// LearnHub LMS — Prisma schema (Step 4: Database Architecture)
+//
+// Notes:
+// - Prisma 7: the datasource URL is NOT set here. It lives in prisma.config.ts
+//   (CLI/migrations) and in lib/prisma.ts (runtime client via driver adapter).
+// - Course content is a RECURSIVE tree (CourseNode self-relation), not a fixed
+//   Course -> Module -> Lesson hierarchy. Any node can have children.
+// - Auth.js-compatible models (User/Account/Session/VerificationToken) are
+//   prepared now; authentication itself is implemented in a later step.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Extensible content-node types. The recursive structure does NOT depend on
+/// these values: any node of any type may contain children of any type.
+enum CourseNodeType {
+  MILESTONE
+  MODULE
+  CHAPTER
+  SECTION
+  LESSON
+  VIDEO
+  ARTICLE
+  ASSIGNMENT
+}
+
+// ---------------------------------------------------------------------------
+// Users + Auth.js persistence
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(STUDENT)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  enrollments Enrollment[]
+  progress    Progress[]
+  auditLogs   AuditLog[]
+}
+
+/// Auth.js OAuth/account persistence
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// Auth.js database-session persistence
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Auth.js email-verification / magic-link persistence
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Catalog: categories + courses
+// ---------------------------------------------------------------------------
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses Course[]
+}
+
+model Course {
+  id           String       @id @default(cuid())
+  title        String
+  slug         String       @unique
+  description  String?
+  thumbnailUrl String?
+  status       CourseStatus @default(DRAFT)
+  categoryId   String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  nodes       CourseNode[]
+  enrollments Enrollment[]
+
+  @@index([status])
+  @@index([categoryId])
+}
+
+// ---------------------------------------------------------------------------
+// Recursive course content
+// ---------------------------------------------------------------------------
+
+/// A node in a course's content tree. The hierarchy is fully recursive:
+/// Course -> nodes of arbitrary depth (e.g. Milestone -> Module -> Chapter ->
+/// Section -> Lesson -> Video). `parentId === null` means a root node that
+/// hangs directly off the course.
+model CourseNode {
+  id             String         @id @default(cuid())
+  courseId       String
+  parentId       String?
+  title          String
+  type           CourseNodeType
+  description    String?
+  youtubeUrl     String?
+  youtubeVideoId String?
+  /// Duration in seconds (nullable — container nodes may not have one).
+  duration       Int?
+  /// Position among siblings within the same parent.
+  sortOrder      Int            @default(0)
+  isPublished    Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  /// Self-relation: optional parent, many children — supports unlimited depth.
+  parent   CourseNode?  @relation("CourseNodeChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children CourseNode[] @relation("CourseNodeChildren")
+
+  progress Progress[]
+
+  
+  @@index([courseId, parentId, sortOrder])
+  @@index([parentId, sortOrder])
+}
+
+// ---------------------------------------------------------------------------
+// Enrollment
+// ---------------------------------------------------------------------------
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  userId     String
+  courseId   String
+  enrolledAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  /// One enrollment per user per course. Also serves userId-only lookups.
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+// ---------------------------------------------------------------------------
+// Lesson / video progress
+// ---------------------------------------------------------------------------
+
+/// Per-user, per-node learning progress (completion, watch time, resume).
+model Progress {
+  id             String    @id @default(cuid())
+  userId         String
+  courseNodeId   String
+  completed      Boolean   @default(false)
+  /// Seconds watched so far (for resume).
+  watchedSeconds Int       @default(0)
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseNode CourseNode @relation(fields: [courseNodeId], references: [id], onDelete: Cascade)
+
+  /// One progress record per user per node. Also serves userId-only lookups.
+  @@unique([userId, courseNodeId])
+  /// Serves "who has progress on this node" + FK cascade scans by node.
+  @@index([courseNodeId])
+}
+
+// ---------------------------------------------------------------------------
+// Audit log (administrative activity)
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  /// SetNull: keep the audit trail even if the acting user is deleted.
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+}
