@@ -1,6 +1,7 @@
 import { PageContainer } from "@/components/layout/page-container";
 import { BackLink } from "@/components/layout/back-link";
-import { CourseCreateForm } from "./course-create-form";
+import { CourseForm } from "@/components/admin/course-form";
+import { createCourseAction } from "./actions";
 
 export default function AdminCourseCreate() {
   return (
@@ -21,9 +22,9 @@ export default function AdminCourseCreate() {
           </p>
         </div>
 
-        {/* Create Course Form Placeholder */}
+        {/* Create Course Form */}
         <div className="border border-border/50 rounded-xl bg-background p-6 space-y-6">
-          <CourseCreateForm />
+          <CourseForm action={createCourseAction} />
         </div>
       </div>
     </PageContainer>

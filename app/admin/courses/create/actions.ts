@@ -5,6 +5,13 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma/client";
 
+import {
+  buildSlugFromTitle,
+  MAX_SLUG_ATTEMPTS,
+  parseCourseInput,
+  type CourseFormState,
+} from "@/lib/courses";
+
 /**
  * ADMIN course creation — server action (Step 6 Part 1).
  *
@@ -19,41 +26,6 @@ import { Prisma } from "@/lib/generated/prisma/client";
  * - Callers only ever receive short, safe, user-friendly strings. Prisma error
  *   text, SQL, and connection details are never returned to the client.
  */
-
-/** Course title: required, trimmed, bounded length. */
-const MIN_TITLE_LENGTH = 3;
-const MAX_TITLE_LENGTH = 120;
-/** Description: optional, trimmed, bounded length. */
-const MAX_DESCRIPTION_LENGTH = 2000;
-/** Thumbnail URL: simple text field for now (no upload); bounded length. */
-const MAX_THUMBNAIL_URL_LENGTH = 500;
-/** Upper bound for the -2, -3, … slug collision suffix chain. */
-const MAX_SLUG_ATTEMPTS = 200;
-
-export interface CourseCreateState {
-  error?: string;
-}
-
-/**
- * Normalize a course title into a URL slug:
- * lowercase, spaces → hyphens, strip unsupported punctuation, collapse
- * repeated hyphens, trim leading/trailing hyphens. No external slug library.
- */
-function buildSlugFromTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .trim()
-    .normalize("NFKD")
-    // strip combining diacritics (é → e) so slugs stay ASCII-safe
-    .replace(/[\u0300-\u036f]/g, "")
-    // drop everything that is not a letter, digit, whitespace, or hyphen
-    .replace(/[^a-z0-9\s-]/g, "")
-    // collapse all whitespace runs (spaces, tabs, newlines) to a single hyphen
-    .replace(/\s+/g, "-")
-    // collapse repeated hyphens (also fills gaps left by dropped punctuation)
-    .replace(/-{2,}/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 /** Create the Course row. Always DRAFT — publishing is a later step. */
 function createDraftCourse(title: string, slug: string, description: string, thumbnailUrl: string | null) {
@@ -74,9 +46,9 @@ function createDraftCourse(title: string, slug: string, description: string, thu
 }
 
 export async function createCourseAction(
-  _prevState: CourseCreateState,
+  _prevState: CourseFormState,
   formData: FormData
-): Promise<CourseCreateState> {
+): Promise<CourseFormState> {
   // ---- 1. Authorization (defense in depth beyond proxy.ts) ----------------
   const session = await auth();
   if (!session?.user?.id || session.user.role !== "ADMIN") {
@@ -84,37 +56,9 @@ export async function createCourseAction(
   }
 
   // ---- 2. Validate input (server-side only; never trust the client) -------
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-  const thumbnailUrlInput = String(formData.get("thumbnailUrl") ?? "").trim();
-
-  if (!title) {
-    return { error: "Course title is required." };
-  }
-  if (title.length < MIN_TITLE_LENGTH) {
-    return {
-      error: `Course title must be at least ${MIN_TITLE_LENGTH} characters.`,
-    };
-  }
-  if (title.length > MAX_TITLE_LENGTH) {
-    return {
-      error: `Course title must be at most ${MAX_TITLE_LENGTH} characters.`,
-    };
-  }
-
-  if (description.length > MAX_DESCRIPTION_LENGTH) {
-    return {
-      error: `Course description must be at most ${MAX_DESCRIPTION_LENGTH} characters.`,
-    };
-  }
-
-  if (thumbnailUrlInput.length > MAX_THUMBNAIL_URL_LENGTH) {
-    return {
-      error: `Thumbnail URL must be at most ${MAX_THUMBNAIL_URL_LENGTH} characters.`,
-    };
-  }
-  // Optional field: empty input persists as null, not "".
-  const thumbnailUrl = thumbnailUrlInput || null;
+  const parsed = parseCourseInput(formData);
+  if (!parsed.ok) return { error: parsed.error };
+  const { title, description, thumbnailUrl } = parsed.values;
 
   // ---- 3. Generate a unique slug server-side ------------------------------
   // The slug is derived ONLY from the title — any client-supplied slug is

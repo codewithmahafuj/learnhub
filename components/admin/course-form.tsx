@@ -5,19 +5,41 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Save, Image as ImageIcon } from "lucide-react";
 
-import { createCourseAction, type CourseCreateState } from "./actions";
+import { type CourseFormState } from "@/lib/courses";
 
-const initialState: CourseCreateState = {};
+export interface CourseFormProps {
+  /** Server action with the (prevState, formData) useActionState signature. */
+  action: (state: CourseFormState, formData: FormData) => Promise<CourseFormState>;
+  /** Existing values to pre-fill (edit mode); omit for a blank create form. */
+  initialTitle?: string;
+  initialDescription?: string;
+  initialThumbnailUrl?: string;
+  /** Heading text on the submit button. */
+  submitLabel?: string;
+}
 
-export function CourseCreateForm() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+/**
+ * Shared course form for create + edit (Step 6 Parts 1 & 2).
+ *
+ * Markup is byte-identical to the original create form — only the action and
+ * pre-filled values are parameterized. The server action owns ALL validation,
+ * slug logic, and persistence; this component only renders and submits.
+ */
+export function CourseForm({
+  action,
+  initialTitle = "",
+  initialDescription = "",
+  initialThumbnailUrl = "",
+  submitLabel = "Save and Continue",
+}: CourseFormProps) {
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription);
   const [category, setCategory] = useState("development");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState(initialThumbnailUrl);
 
   const [state, formAction, isPending] = useActionState(
-    createCourseAction,
-    initialState
+    action,
+    {} as CourseFormState
   );
 
   return (
@@ -115,7 +137,7 @@ export function CourseCreateForm() {
           Save Draft
         </Button>
         <Button type="submit" className="h-9 text-xs font-semibold gap-1.5" disabled={isPending}>
-          <Save className="h-3.5 w-3.5" /> Save and Continue
+          <Save className="h-3.5 w-3.5" /> {submitLabel}
         </Button>
       </div>
     </form>
