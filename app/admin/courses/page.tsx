@@ -3,24 +3,33 @@ import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CourseTableRow } from "@/components/admin/course-table-row";
+import { prisma } from "@/lib/prisma";
 
-export default function AdminCourses() {
-  const adminCourses = [
-    {
-      id: "web-dev",
-      title: "Professional Web Development",
-      handle: "/courses/web-dev",
-      status: "Published",
-      editHref: "/admin/courses/web-dev",
+// The course list must reflect the live database on every request, not a
+// build-time snapshot taken with whatever rows existed during `next build`.
+export const dynamic = "force-dynamic";
+
+export default async function AdminCourses() {
+  const courses = await prisma.course.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      status: true,
+      createdAt: true,
     },
-    {
-      id: "nextjs-architecture",
-      title: "Next.js Senior Architecture",
-      handle: "/courses/nextjs-architecture",
-      status: "Published",
-      editHref: "/admin/courses/nextjs-architecture",
-    },
-  ];
+  });
+
+  const adminCourses = courses.map((course) => ({
+    id: course.id,
+    title: course.title,
+    // Student-facing URL handle for the course (public browsing arrives in a
+    // later step); keeps the row's existing "URL Handle" line meaningful.
+    handle: `/courses/${course.slug}`,
+    status: course.status,
+    editHref: `/admin/courses/${course.id}`,
+  }));
 
   return (
     <PageContainer

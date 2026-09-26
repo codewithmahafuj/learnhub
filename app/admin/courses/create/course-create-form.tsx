@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useActionState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Save, Image as ImageIcon } from "lucide-react";
+
+import { createCourseAction, type CourseCreateState } from "./actions";
+
+const initialState: CourseCreateState = {};
 
 export function CourseCreateForm() {
   const [title, setTitle] = useState("");
@@ -11,18 +15,20 @@ export function CourseCreateForm() {
   const [category, setCategory] = useState("development");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-  };
+  const [state, formAction, isPending] = useActionState(
+    createCourseAction,
+    initialState
+  );
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form className="space-y-4" action={formAction}>
       <div className="space-y-1.5">
         <label htmlFor="courseTitle" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Course Title
         </label>
         <input
           id="courseTitle"
+          name="title"
           type="text"
           placeholder="e.g. Advanced TypeScript Deep Dive"
           value={title}
@@ -37,6 +43,7 @@ export function CourseCreateForm() {
         </label>
         <textarea
           id="courseDescription"
+          name="description"
           placeholder="Provide a detailed description of the course contents..."
           rows={4}
           value={description}
@@ -52,6 +59,7 @@ export function CourseCreateForm() {
           </label>
           <select
             id="courseCategory"
+            name="category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
@@ -59,7 +67,7 @@ export function CourseCreateForm() {
             <option value="development">Web Development</option>
             <option value="design">UI/UX Design</option>
             <option value="data">Data Science</option>
-            <option value="business">Business & Management</option>
+            <option value="business">Business &amp; Management</option>
           </select>
         </div>
 
@@ -71,6 +79,7 @@ export function CourseCreateForm() {
             <div className="relative flex-1">
               <input
                 id="thumbnailUrl"
+                name="thumbnailUrl"
                 type="text"
                 placeholder="https://example.com/thumbnail.png"
                 value={thumbnailUrl}
@@ -85,16 +94,27 @@ export function CourseCreateForm() {
         </div>
       </div>
 
+      {state.error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {state.error}
+        </p>
+      ) : null}
+
       <div className="flex gap-3 justify-end pt-2 border-t border-border/40">
         <Link href="/admin/courses">
           <Button type="button" variant="outline" className="h-9 text-xs font-semibold">
             Cancel
           </Button>
         </Link>
-        <Button type="button" variant="secondary" className="h-9 text-xs font-semibold">
+        <Button
+          type="submit"
+          variant="secondary"
+          className="h-9 text-xs font-semibold"
+          disabled={isPending}
+        >
           Save Draft
         </Button>
-        <Button type="submit" className="h-9 text-xs font-semibold gap-1.5">
+        <Button type="submit" className="h-9 text-xs font-semibold gap-1.5" disabled={isPending}>
           <Save className="h-3.5 w-3.5" /> Save and Continue
         </Button>
       </div>
