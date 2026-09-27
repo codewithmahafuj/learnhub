@@ -1,17 +1,23 @@
 "use client";
 
-import { Menu, Bell } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
+import { NotificationsPopover } from "@/components/ui/notifications-popover";
+import { UserMenu } from "@/components/ui/user-menu";
 
 interface NavbarProps {
   role: "student" | "admin";
   onMenuClick: () => void;
   className?: string;
+  /** Signed-in identity for the avatar menu (session callback provides these). */
+  userName?: string | null;
+  userEmail?: string | null;
+  userRole?: string | null;
 }
 
-export function Navbar({ role, onMenuClick, className }: NavbarProps) {
+export function Navbar({ role, onMenuClick, className, userName, userEmail, userRole }: NavbarProps) {
   const pathname = usePathname();
 
   // Helper to get breadcrumb text from current pathname
@@ -61,20 +67,9 @@ export function Navbar({ role, onMenuClick, className }: NavbarProps) {
 
       {/* Right side: Notifications & User profile */}
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 text-muted-foreground hover:bg-muted/80 rounded-md relative"
-          aria-label="Notifications"
-        >
-          <Bell className="h-4.5 w-4.5" />
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary rounded-full" />
-        </Button>
+        <NotificationsPopover />
 
-        {/* Simple Profile Placeholder */}
-        <div className="h-8 w-8 rounded-full bg-muted border border-border/80 flex items-center justify-center text-xs font-medium text-muted-foreground hover:bg-muted/80 transition-colors cursor-pointer ml-1 select-none">
-          {role === "admin" ? "AD" : "ST"}
-        </div>
+        <UserMenu name={userName} email={userEmail} role={userRole ?? (role === "admin" ? "ADMIN" : "STUDENT")} />
       </div>
     </header>
   );

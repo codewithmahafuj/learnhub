@@ -11,6 +11,7 @@ import {
   createCourseNodeAction,
   updateCourseNodeAction,
   deleteCourseNodeAction,
+  reorderCourseNodeAction,
 } from "./nodes/actions";
 import { prisma } from "@/lib/prisma";
 import { buildNodeTree, type FlatNodeItem } from "@/lib/course-nodes";
@@ -49,7 +50,7 @@ export default async function AdminCourseEdit({ params }: CourseEditProps) {
   // Sorting: roots and siblings both by sortOrder ASC (stable recursion).
   const flatNodes = await prisma.courseNode.findMany({
     where: { courseId: course.id },
-    orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }],
+    orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
     select: {
       id: true,
       parentId: true,
@@ -66,6 +67,10 @@ export default async function AdminCourseEdit({ params }: CourseEditProps) {
   const createNodeWithCourse = createCourseNodeAction.bind(null, course.id);
   const updateNodeWithCourse = updateCourseNodeAction.bind(null, course.id);
   const deleteNodeWithCourse = deleteCourseNodeAction.bind(null, course.id);
+  const reorderNodeWithCourse = reorderCourseNodeAction.bind(
+    null,
+    course.id
+  );
 
   return (
     <PageContainer>
@@ -103,7 +108,7 @@ export default async function AdminCourseEdit({ params }: CourseEditProps) {
           </div>
         </div>
 
-        {/* Course Structure — recursive CourseNode editor (Step 6 Part 4) */}
+        {/* Course Structure — recursive CourseNode editor with drag-and-drop reordering */}
         <div className="space-y-4">
           <h2 className="text-base font-semibold tracking-tight text-foreground">
             Course Structure
@@ -113,6 +118,7 @@ export default async function AdminCourseEdit({ params }: CourseEditProps) {
             createAction={createNodeWithCourse}
             updateAction={updateNodeWithCourse}
             deleteAction={deleteNodeWithCourse}
+            reorderAction={reorderNodeWithCourse}
           />
         </div>
       </div>

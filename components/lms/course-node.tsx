@@ -35,14 +35,32 @@ export interface CourseNodeData {
   children?: CourseNodeData[];
 }
 
+/**
+ * Optional drag-and-drop hooks for the admin tree (Step 6 Part 5).
+ *
+ * SortableRow wraps THIS node's row element and receives a render-prop for
+ * the dedicated drag handle (which must live inside the sortable component,
+ * since only it owns the dnd-kit listeners). Every recursion level wraps
+ * itself, so each row gets its own sortable registration and handle.
+ * Omitted entirely in the student-facing tree — rendering stays identical.
+ */
+export interface CourseNodeDndSlots {
+  SortableRow?: React.ComponentType<{
+    node: CourseNodeData;
+    children: (handle: React.ReactNode) => React.ReactNode;
+  }>;
+}
+
 export interface CourseNodeProps {
   node: CourseNodeData;
   depth?: number;
   defaultExpanded?: boolean;
   className?: string;
+  /** Drag-and-drop hooks; optional and only supplied by the admin editor. */
+  dnd?: CourseNodeDndSlots;
   /**
    * Optional renderer producing admin action buttons for a node (Step 6 Part 4).
-   * Propagates down the whole recursion; omitted entirely in the
+   * Propagates down the whole recursion unchanged; omitted in the
    * student-facing tree — rendering stays identical.
    */
   renderNodeActions?: (node: CourseNodeData) => React.ReactNode;
@@ -53,11 +71,13 @@ export function CourseNode({
   depth = 0,
   defaultExpanded = true,
   className,
+  dnd,
   renderNodeActions,
 }: CourseNodeProps) {
   const actions = renderNodeActions?.(node);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const hasChildren = Boolean(node.children && node.children.length > 0);
+  const Row = dnd?.SortableRow;
 
   const renderIcon = () => {
     // Node types are stored uppercase (Prisma enum); normalize for matching.
@@ -85,7 +105,7 @@ export function CourseNode({
 
   // Render parent node with expandable children
   if (hasChildren) {
-    return (
+    const content = (handle: React.ReactNode) => (
       <div
         className={cn(
           "border border-border/60 rounded-xl bg-background overflow-hidden transition-colors",
@@ -97,6 +117,7 @@ export function CourseNode({
           className="px-5 py-4 bg-muted/20 border-b border-border/40 flex items-center justify-between cursor-pointer select-none hover:bg-muted/30 transition-colors"
         >
           <div className="flex items-center gap-3">
+            {handle}
             <button
               type="button"
               className="text-muted-foreground hover:text-foreground focus:outline-none"
@@ -139,6 +160,7 @@ export function CourseNode({
                 key={child.id}
                 node={child}
                 depth={depth + 1}
+                dnd={dnd}
                 renderNodeActions={renderNodeActions}
               />
             ))}
@@ -146,10 +168,12 @@ export function CourseNode({
         )}
       </div>
     );
+
+    return Row ? <Row node={node}>{content}</Row> : content(null);
   }
 
   // Render leaf item
-  return (
+  const leafContent = (handle: React.ReactNode) => (
     <div
       className={cn(
         "py-3 flex items-center justify-between text-sm transition-colors",
@@ -158,6 +182,7 @@ export function CourseNode({
       )}
     >
       <span className="flex items-center gap-2">
+        {handle}
         {renderIcon()}
         <span>{node.title}</span>
       </span>
@@ -169,4 +194,6 @@ export function CourseNode({
       </span>
     </div>
   );
+
+  return Row ? <Row node={node}>{leafContent}</Row> : leafContent(null);
 }

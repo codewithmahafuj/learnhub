@@ -1,7 +1,11 @@
 "use client";
 
 import React from "react";
-import { CourseNode, CourseNodeData } from "./course-node";
+import {
+  CourseNode,
+  CourseNodeData,
+  type CourseNodeDndSlots,
+} from "./course-node";
 import { cn } from "@/lib/utils";
 
 export interface CourseTreeProps {
@@ -13,6 +17,11 @@ export interface CourseTreeProps {
    * Omitted in the student-facing tree — rendering stays identical.
    */
   renderNodeActions?: (node: CourseNodeData) => React.ReactNode;
+  /**
+   * Drag-and-drop hooks threaded into every row (Step 6 Part 5). The admin
+   * editor supplies these; the student-facing tree omits them entirely.
+   */
+  dnd?: CourseNodeDndSlots;
 }
 
 export function CourseTree({
@@ -20,6 +29,7 @@ export function CourseTree({
   title,
   className,
   renderNodeActions,
+  dnd,
 }: CourseTreeProps) {
   return (
     <div className={cn("space-y-4", className)}>
@@ -34,6 +44,7 @@ export function CourseTree({
             key={node.id}
             node={node}
             depth={0}
+            dnd={dnd}
             renderNodeActions={renderNodeActions}
           />
         ))}
@@ -43,3 +54,4 @@ export function CourseTree({
 }
 
 export type { CourseNodeData };
+export type { CourseNodeDndSlots } from "./course-node";

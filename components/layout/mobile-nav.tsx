@@ -18,9 +18,16 @@ export function MobileNav({ role, isOpen, onClose }: MobileNavProps) {
   const pathname = usePathname();
   const navigation = role === "admin" ? adminNavigation : studentNavigation;
 
-  // Auto-close on path changes
+  // Auto-close when the route actually changes. Deliberately NOT keyed on
+  // onClose's identity: the parent recreates that callback on every render,
+  // and re-running the effect then would close the drawer in the same frame
+  // the hamburger opens it.
+  const prevPathname = React.useRef(pathname);
   React.useEffect(() => {
-    onClose();
+    if (prevPathname.current !== pathname) {
+      prevPathname.current = pathname;
+      onClose();
+    }
   }, [pathname, onClose]);
 
   // Handle escape key to close

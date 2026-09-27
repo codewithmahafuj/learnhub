@@ -168,6 +168,142 @@ export async function updateCourseNodeAction(
 }
 
 // ---------------------------------------------------------------------------
+// REORDER (drag-and-drop sibling reordering) — Step 6 Part 5
+// ---------------------------------------------------------------------------
+
+/**
+ * Persist a drag-and-drop sibling reorder (Step 6 Part 5).
+ *
+ * The client drops a dragged node before or after a target sibling and sends
+ * only (nodeId, targetId, position) — never sortOrders. The server derives
+ * everything else from the database:
+ *
+ * - Both nodes are fetched scoped to the bound courseId (cross-course ids
+ *   read as missing → safe no-op), so client-supplied course ownership is
+ *   never trusted.
+ * - Siblings must share the same parentId (null = roots). A target from a
+ *   different parent is rejected — reordering NEVER changes parentId, so
+ *   drag-to-nest / cross-parent moves are structurally impossible.
+ * - The full sibling group is renumbered 0..n-1 with the dragged node placed
+ *   at the requested slot, inside ONE prisma.$transaction → deterministic
+ *   order (no unique-constraint juggling), atomic (no partial state), and
+ *   unrelated siblings outside the group are never touched.
+ *
+ * courseId is bound server-side in the page; the client supplies only ids.
+ */
+export async function reorderCourseNodeAction(
+  courseId: string,
+  nodeId: string,
+  targetId: string,
+  position: "before" | "after"
+): Promise<NodeActionState> {
+  // ---- 1. Validate ids ------------------------------------------------------
+  if (typeof courseId !== "string" || !courseId.trim()) {
+    return { error: "Invalid course." };
+  }
+  if (typeof nodeId !== "string" || !nodeId.trim()) {
+    return { error: "Invalid course item." };
+  }
+  if (typeof targetId !== "string" || !targetId.trim()) {
+    return { error: "Invalid drop target." };
+  }
+  if (position !== "before" && position !== "after") {
+    return { error: "Invalid drop position." };
+  }
+
+  // ---- 2. Authorization (defense in depth beyond proxy.ts) ----------------
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    return { error: "You are not authorized to modify course content." };
+  }
+
+  try {
+    // ---- 3. Course must exist ----------------------------------------------
+    const course = await requireCourse(courseId);
+    if (!course) {
+      return { error: "This course no longer exists." };
+    }
+
+    // ---- 4. Both nodes must exist and belong to this course ----------------
+    // Scoped findFirst: a node from another course is indistinguishable from
+    // a missing one — either way this is a safe no-op.
+    const [node, target] = await Promise.all([
+      prisma.courseNode.findFirst({
+        where: { id: nodeId, courseId },
+        select: { id: true, parentId: true },
+      }),
+      prisma.courseNode.findFirst({
+        where: { id: targetId, courseId },
+        select: { id: true, parentId: true },
+      }),
+    ]);
+    if (!node || !target) {
+      // Missing (stale drop after a delete) or cross-course — idempotent.
+      revalidatePath(`/admin/courses/${courseId}`);
+      return { ok: true };
+    }
+
+    // ---- 5. Same sibling group only (parent NEVER changes) -----------------
+    if (node.parentId !== target.parentId) {
+      return { error: "Items can only be reordered among their own siblings." };
+    }
+    if (node.id === target.id) {
+      // Dropped on itself — nothing to do.
+      revalidatePath(`/admin/courses/${courseId}`);
+      return { ok: true };
+    }
+
+    // ---- 6. Deterministically renumber the sibling group -------------------
+    const siblings = await prisma.courseNode.findMany({
+      where: { courseId, parentId: node.parentId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      select: { id: true },
+    });
+    if (!siblings.some((s) => s.id === node.id)) {
+      // Impossible in practice (node was fetched above) — safe no-op.
+      revalidatePath(`/admin/courses/${courseId}`);
+      return { ok: true };
+    }
+
+    const withoutNode = siblings.filter((s) => s.id !== node.id);
+    const targetIndex = withoutNode.findIndex((s) => s.id === target.id);
+    if (targetIndex === -1) {
+      // Target vanished between the check and now — safe no-op.
+      revalidatePath(`/admin/courses/${courseId}`);
+      return { ok: true };
+    }
+    // "before" inserts at the target's slot; "after" one past it.
+    const insertIndex = position === "before" ? targetIndex : targetIndex + 1;
+    withoutNode.splice(insertIndex, 0, { id: node.id });
+
+    // ---- 7. Atomic persist -------------------------------------------------
+    // One transaction writes the whole group; readers never observe a
+    // partially renumbered sibling list.
+    await prisma.$transaction(
+      withoutNode.map((sibling, index) =>
+        prisma.courseNode.update({
+          where: { id: sibling.id },
+          data: { sortOrder: index },
+        })
+      )
+    );
+  } catch (error) {
+    const isRecordMissing =
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025";
+    if (isRecordMissing) {
+      // A row vanished between the checks and the writes — safe no-op.
+      revalidatePath(`/admin/courses/${courseId}`);
+      return { ok: true };
+    }
+    return logAndMessage("[reorderCourseNodeAction]", error);
+  }
+
+  revalidatePath(`/admin/courses/${courseId}`);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
 // DELETE
 // ---------------------------------------------------------------------------
 
