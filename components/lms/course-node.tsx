@@ -26,7 +26,8 @@ export interface CourseNodeData {
   id: string;
   title: string;
   type?: CourseNodeType;
-  description?: string;
+  /** Null when absent (matches the database's nullable column). */
+  description?: string | null;
   duration?: string;
   itemCount?: number;
   completed?: boolean;
@@ -39,6 +40,12 @@ export interface CourseNodeProps {
   depth?: number;
   defaultExpanded?: boolean;
   className?: string;
+  /**
+   * Optional renderer producing admin action buttons for a node (Step 6 Part 4).
+   * Propagates down the whole recursion; omitted entirely in the
+   * student-facing tree — rendering stays identical.
+   */
+  renderNodeActions?: (node: CourseNodeData) => React.ReactNode;
 }
 
 export function CourseNode({
@@ -46,12 +53,15 @@ export function CourseNode({
   depth = 0,
   defaultExpanded = true,
   className,
+  renderNodeActions,
 }: CourseNodeProps) {
+  const actions = renderNodeActions?.(node);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const hasChildren = Boolean(node.children && node.children.length > 0);
 
   const renderIcon = () => {
-    switch (node.type) {
+    // Node types are stored uppercase (Prisma enum); normalize for matching.
+    switch ((node.type ?? "").toLowerCase()) {
       case "video":
       case "lesson":
         return <Play className={cn("h-4 w-4 shrink-0", node.active ? "text-primary fill-primary/20" : "text-muted-foreground/60")} />;
@@ -111,13 +121,26 @@ export function CourseNode({
             {node.children && !node.itemCount && (
               <span>{node.children.length} Items</span>
             )}
+            {actions && (
+              <div
+                className="flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {actions}
+              </div>
+            )}
           </div>
         </div>
 
         {isExpanded && node.children && (
           <div className="divide-y divide-border/40 px-5">
             {node.children.map((child) => (
-              <CourseNode key={child.id} node={child} depth={depth + 1} />
+              <CourseNode
+                key={child.id}
+                node={child}
+                depth={depth + 1}
+                renderNodeActions={renderNodeActions}
+              />
             ))}
           </div>
         )}
@@ -138,9 +161,12 @@ export function CourseNode({
         {renderIcon()}
         <span>{node.title}</span>
       </span>
-      {node.duration && (
-        <span className="text-xs text-muted-foreground">{node.duration}</span>
-      )}
+      <span className="flex items-center gap-2">
+        {node.duration && (
+          <span className="text-xs text-muted-foreground">{node.duration}</span>
+        )}
+        {actions}
+      </span>
     </div>
   );
 }

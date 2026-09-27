@@ -49,7 +49,9 @@ export function ConfirmDialog({
       }}
     >
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 bg-black/40 transition-opacity" />
+        {/* No CSS transitions: Base UI delays unmount until transitionend,
+            which never fires in non-composited/hidden webviews. */}
+        <AlertDialog.Backdrop className="fixed inset-0 bg-black/40" />
         <AlertDialog.Popup className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border/50 bg-background p-6 shadow-lg focus:outline-none">
           <AlertDialog.Title className="text-lg font-semibold tracking-tight text-foreground">
             {title}

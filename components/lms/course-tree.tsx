@@ -8,9 +8,19 @@ export interface CourseTreeProps {
   nodes: CourseNodeData[];
   title?: string;
   className?: string;
+  /**
+   * Renders a node's data into optional admin action buttons (Step 6 Part 4).
+   * Omitted in the student-facing tree — rendering stays identical.
+   */
+  renderNodeActions?: (node: CourseNodeData) => React.ReactNode;
 }
 
-export function CourseTree({ nodes, title, className }: CourseTreeProps) {
+export function CourseTree({
+  nodes,
+  title,
+  className,
+  renderNodeActions,
+}: CourseTreeProps) {
   return (
     <div className={cn("space-y-4", className)}>
       {title && (
@@ -20,7 +30,12 @@ export function CourseTree({ nodes, title, className }: CourseTreeProps) {
       )}
       <div className="space-y-3">
         {nodes.map((node) => (
-          <CourseNode key={node.id} node={node} depth={0} />
+          <CourseNode
+            key={node.id}
+            node={node}
+            depth={0}
+            renderNodeActions={renderNodeActions}
+          />
         ))}
       </div>
     </div>

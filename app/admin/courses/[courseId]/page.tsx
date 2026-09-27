@@ -2,12 +2,18 @@ import { notFound } from "next/navigation";
 import { PageContainer } from "@/components/layout/page-container";
 import { BackLink } from "@/components/layout/back-link";
 import { CourseHeader } from "@/components/lms/course-header";
-import { EmptyState } from "@/components/ui/empty-state";
-import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
 import { CourseForm } from "@/components/admin/course-form";
+import { CourseStructureEditor } from "@/components/admin/course-structure-editor";
 import { updateCourseAction } from "./actions";
+import {
+  createCourseNodeAction,
+  updateCourseNodeAction,
+  deleteCourseNodeAction,
+} from "./nodes/actions";
 import { prisma } from "@/lib/prisma";
+import { buildNodeTree, type FlatNodeItem } from "@/lib/course-nodes";
 
 // Editing must always reflect the live database record, never a cached copy.
 export const dynamic = "force-dynamic";
@@ -39,8 +45,27 @@ export default async function AdminCourseEdit({ params }: CourseEditProps) {
     notFound();
   }
 
+  // Load the full node list once and assemble the tree server-side.
+  // Sorting: roots and siblings both by sortOrder ASC (stable recursion).
+  const flatNodes = await prisma.courseNode.findMany({
+    where: { courseId: course.id },
+    orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }],
+    select: {
+      id: true,
+      parentId: true,
+      title: true,
+      type: true,
+      description: true,
+      sortOrder: true,
+    },
+  });
+  const nodeTree = buildNodeTree(flatNodes as FlatNodeItem[]);
+
   // Bind the course id server-side; the client never supplies it per request.
   const updateWithId = updateCourseAction.bind(null, course.id);
+  const createNodeWithCourse = createCourseNodeAction.bind(null, course.id);
+  const updateNodeWithCourse = updateCourseNodeAction.bind(null, course.id);
+  const deleteNodeWithCourse = deleteCourseNodeAction.bind(null, course.id);
 
   return (
     <PageContainer>
@@ -78,16 +103,16 @@ export default async function AdminCourseEdit({ params }: CourseEditProps) {
           </div>
         </div>
 
-        {/* Curriculum builder — placeholder until the CourseNode phase */}
+        {/* Course Structure — recursive CourseNode editor (Step 6 Part 4) */}
         <div className="space-y-4">
           <h2 className="text-base font-semibold tracking-tight text-foreground">
-            Curriculum Structure Outline
+            Course Structure
           </h2>
-
-          <EmptyState
-            title="Curriculum tree renderer offline"
-            description="Course chapters and learning units can be constructed and ordered recursively here in the future database phase."
-            className="p-12 border-dashed"
+          <CourseStructureEditor
+            nodes={nodeTree}
+            createAction={createNodeWithCourse}
+            updateAction={updateNodeWithCourse}
+            deleteAction={deleteNodeWithCourse}
           />
         </div>
       </div>
