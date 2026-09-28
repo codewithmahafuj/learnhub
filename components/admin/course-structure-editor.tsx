@@ -18,6 +18,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -147,7 +148,10 @@ export function CourseStructureEditor({
       // is the only activator anyway.
       activationConstraint: { distance: 4 },
     }),
-    useSensor(KeyboardSensor)
+    // sortableKeyboardCoordinates: arrow keys jump to the previous/next
+    // SIBLING rather than translating 25px — keyboard drags actually land on
+    // the neighboring row instead of dropping over self (no-op).
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   // Pointer-accurate collision detection: with the default rectIntersection
@@ -422,6 +426,7 @@ export function CourseStructureEditor({
                 title: dialog.node.title,
                 type: dialog.node.type ?? "MODULE",
                 description: dialog.node.description ?? null,
+                youtubeUrl: dialog.node.youtubeUrl ?? null,
                 nodeId: dialog.node.id,
               }
             : undefined

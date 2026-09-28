@@ -4,6 +4,7 @@ import * as React from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { Button } from "@/components/ui/button";
 import { COURSE_NODE_TYPES } from "@/lib/course-nodes";
+import { extractYouTubeVideoId, isVideoNodeType } from "@/lib/youtube";
 
 export interface NodeFormDialogProps {
   open: boolean;
@@ -15,7 +16,14 @@ export interface NodeFormDialogProps {
   /** Parent node id for child creation (null/undefined = root). */
   parentId?: string | null;
   /** Pre-filled values in edit mode. */
-  initial?: { title: string; type: string; description: string | null; nodeId?: string };
+  initial?: {
+    title: string;
+    type: string;
+    description: string | null;
+    /** Stored YouTube URL — pre-fills the field for VIDEO/LESSON nodes (Part 6). */
+    youtubeUrl?: string | null;
+    nodeId?: string;
+  };
   /** Server action (prevState, formData) — passed from the server component. */
   action: (state: NodeActionStateFromServer, formData: FormData) => Promise<NodeActionStateFromServer>;
   /** Called after a successful action so the tree can refresh/close. */
@@ -32,8 +40,10 @@ interface NodeActionStateFromServer {
  * Reusable add/edit dialog for CourseNodes (Step 6 Part 4).
  *
  * Create mode posts parentId + title/type/description; edit mode posts
- * nodeId + the same fields. Fields that belong to later features (YouTube,
- * duration, publish state, parent, sort order) are deliberately absent.
+ * nodeId + the same fields. For VIDEO/LESSON types the dialog also renders a
+ * youtubeUrl input (Step 6 Part 6); the video id is never edited here — the
+ * server derives it from the url. Duration and publish state still belong to
+ * later features.
  */
 export function NodeFormDialog({
   open,
@@ -47,6 +57,21 @@ export function NodeFormDialog({
 }: NodeFormDialogProps) {
   const [state, formAction, isPending] = React.useActionState(action, {});
   const successHandled = React.useRef(false);
+
+  // All form fields are CONTROLLED so the admin's input survives React 19's
+  // automatic form reset after an action response (e.g. a failed submit that
+  // re-renders the error). The controlled type select also lets the YouTube
+  // field appear/disappear as the type changes.
+  const [type, setType] = React.useState(initial?.type ?? "MODULE");
+  const [youtubeValue, setYoutubeValue] = React.useState(initial?.youtubeUrl ?? "");
+  const [title, setTitle] = React.useState(initial?.title ?? "");
+  const [description, setDescription] = React.useState(initial?.description ?? "");
+
+
+  // Step 6 Part 6: the YouTube field belongs to VIDEO/LESSON nodes only.
+  const showYouTubeField = isVideoNodeType(type);
+  // Live admin preview: shown only while the typed url parses to a valid id.
+  const previewVideoId = showYouTubeField ? extractYouTubeVideoId(youtubeValue) : null;
 
   React.useEffect(() => {
     if (state.ok && !successHandled.current) {
@@ -118,7 +143,8 @@ export function NodeFormDialog({
                 id="nodeTitle"
                 name="title"
                 type="text"
-                defaultValue={mode === "edit" ? initial?.title ?? "" : ""}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
                 placeholder="e.g. HTML Fundamentals"
                 className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
               />
@@ -134,7 +160,8 @@ export function NodeFormDialog({
               <select
                 id="nodeType"
                 name="type"
-                defaultValue={mode === "edit" ? initial?.type ?? "MODULE" : "MODULE"}
+                value={type}
+                onChange={(event) => setType(event.target.value)}
                 className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
               >
                 {COURSE_NODE_TYPES.map((t) => (
@@ -156,11 +183,47 @@ export function NodeFormDialog({
                 id="nodeDescription"
                 name="description"
                 rows={3}
-                defaultValue={mode === "edit" ? initial?.description ?? "" : ""}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
                 placeholder="Short summary shown under the title…"
                 className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
               />
             </div>
+
+            {showYouTubeField ? (
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="nodeYouTubeUrl"
+                  className="text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                >
+                  YouTube Video URL (optional)
+                </label>
+                <input
+                  id="nodeYouTubeUrl"
+                  name="youtubeUrl"
+                  type="text"
+                  inputMode="url"
+                  autoComplete="off"
+                  value={youtubeValue}
+                  onChange={(event) => setYoutubeValue(event.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=…"
+                  className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                />
+                {previewVideoId ? (
+                  // Admin-only preview (Part 6 §8): embed of the parsed id.
+                  <div className="mt-2 overflow-hidden rounded-md border border-border/50 aspect-video">
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${previewVideoId}`}
+                      title="YouTube video preview"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      loading="lazy"
+                      className="h-full w-full"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {state.error ? (
               <p className="text-sm text-destructive" role="alert">

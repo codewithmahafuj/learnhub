@@ -107,6 +107,11 @@ export async function createCourseNodeAction(
         title,
         type,
         description,
+        // Step 6 Part 6: youtubeUrl already normalized + youtubeVideoId
+        // already derived server-side inside parseNodeInput (both null when
+        // no URL was supplied).
+        youtubeUrl: parsed.values.youtubeUrl,
+        youtubeVideoId: parsed.values.youtubeVideoId,
         sortOrder: nextSortOrder,
       },
     });
@@ -123,9 +128,12 @@ export async function createCourseNodeAction(
 // ---------------------------------------------------------------------------
 
 /**
- * Update an existing node's title/type/description. courseId, parentId,
- * sortOrder, isPublished, and the YouTube fields are intentionally NOT
- * updatable here — they belong to later features.
+ * Update an existing node's title/type/description (+ YouTube metadata,
+ * Step 6 Part 6). courseId, parentId, sortOrder, and isPublished are
+ * intentionally NOT updatable here — they belong to later features.
+ *
+ * youtubeVideoId is ALWAYS derived server-side from youtubeUrl inside
+ * parseNodeInput — a client-supplied id is never trusted.
  */
 export async function updateCourseNodeAction(
   courseId: string,
@@ -150,14 +158,40 @@ export async function updateCourseNodeAction(
 
   try {
     // ---- 3. Node must exist and belong to this course ---------------------
-    const node = await findCourseNode(courseId, nodeId);
+    // Full row fetched: the current youtube fields are preserved verbatim
+    // when the form has no YouTube field rendered (see below).
+    const node = await prisma.courseNode.findFirst({
+      where: { id: nodeId, courseId },
+      select: { id: true, youtubeUrl: true, youtubeVideoId: true },
+    });
     if (!node) {
       return { error: "This course item no longer exists." };
     }
 
+    // ---- 4. YouTube fields (Step 6 Part 6) ---------------------------------
+    // The dialog renders the youtubeUrl input ONLY for VIDEO/LESSON nodes, so
+    // the presence of the field in the FormData is the signal for what the
+    // admin saw and could edit:
+    // - field ABSENT  → the dialog never offered YouTube editing for this
+    //   node type → PRESERVE the stored values untouched (switching a
+    //   VIDEO/LESSON to MILESTONE etc. must not silently destroy data; the
+    //   spec explicitly says to preserve safely).
+    // - field PRESENT → the admin had the input; use exactly what was
+    //   submitted — an empty value means "clear both fields" (validated +
+    //   derived inside parseNodeInput when non-empty).
+    const youtubeFields = formData.has("youtubeUrl")
+      ? {
+          youtubeUrl: parsed.values.youtubeUrl,
+          youtubeVideoId: parsed.values.youtubeVideoId,
+        }
+      : {
+          youtubeUrl: node.youtubeUrl,
+          youtubeVideoId: node.youtubeVideoId,
+        };
+
     await prisma.courseNode.update({
       where: { id: nodeId },
-      data: { title, type, description },
+      data: { title, type, description, ...youtubeFields },
     });
   } catch (error) {
     return logAndMessage("[updateCourseNodeAction]", error);

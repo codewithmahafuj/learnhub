@@ -1,10 +1,12 @@
 /**
- * Shared CourseNode helpers (Step 6 Part 4).
+ * Shared CourseNode helpers (Step 6 Parts 4 & 6).
  *
  * Deliberately PURE — no Prisma, no server-only imports — so both the server
  * actions and client components can share the exact same validation rules and
  * tree types. Database-facing cascade handling stays in the actions.
  */
+
+import { extractYouTubeVideoId, normalizeYouTubeUrl } from "@/lib/youtube";
 
 /** CourseNode title: required, trimmed, bounded length. */
 export const MIN_NODE_TITLE_LENGTH = 2;
@@ -28,11 +30,18 @@ export type CourseNodeTypeValue = (typeof COURSE_NODE_TYPES)[number];
 
 /**
  * Validated, trimmed node input. `parentId` null = root node.
+ *
+ * `youtubeUrl` is the normalized URL the admin submitted (or null) and
+ * `youtubeVideoId` is ALWAYS derived server-side from it — never trusted
+ * from the client. Both are null for non-video node types and whenever no
+ * (valid) URL is supplied (Step 6 Part 6).
  */
 export interface NodeFormValues {
   title: string;
   type: CourseNodeTypeValue;
   description: string | null;
+  youtubeUrl: string | null;
+  youtubeVideoId: string | null;
 }
 
 /**
@@ -44,6 +53,10 @@ export interface NodeTreeItem {
   title: string;
   type: string;
   description: string | null;
+  /** Normalized YouTube URL (Step 6 Part 6) — null when absent. */
+  youtubeUrl: string | null;
+  /** ALWAYS derived server-side from youtubeUrl — never client-supplied. */
+  youtubeVideoId: string | null;
   children: NodeTreeItem[];
 }
 
@@ -54,6 +67,8 @@ export interface FlatNodeItem {
   title: string;
   type: string;
   description: string | null;
+  youtubeUrl?: string | null;
+  youtubeVideoId?: string | null;
   sortOrder: number;
 }
 
@@ -73,6 +88,8 @@ export function buildNodeTree(flat: FlatNodeItem[]): NodeTreeItem[] {
       title: row.title,
       type: row.type,
       description: row.description,
+      youtubeUrl: row.youtubeUrl ?? null,
+      youtubeVideoId: row.youtubeVideoId ?? null,
       children: [],
     });
   }
@@ -123,12 +140,29 @@ export function parseNodeInput(formData: FormData): { ok: true; values: NodeForm
     return { ok: false, error: `Description must be at most ${MAX_NODE_DESCRIPTION_LENGTH} characters.` };
   }
 
+  // ---- YouTube URL (Step 6 Part 6) -----------------------------------------
+  // Optional for every node type; validated + normalized whenever supplied.
+  // The video id is derived here, server-side — the client never submits one.
+  const rawYouTubeUrl = String(formData.get("youtubeUrl") ?? "").trim();
+  let youtubeUrl: string | null = null;
+  let youtubeVideoId: string | null = null;
+  if (rawYouTubeUrl) {
+    const videoId = extractYouTubeVideoId(rawYouTubeUrl);
+    if (!videoId) {
+      return { ok: false, error: "Please enter a valid YouTube video URL." };
+    }
+    youtubeUrl = normalizeYouTubeUrl(rawYouTubeUrl);
+    youtubeVideoId = videoId;
+  }
+
   return {
     ok: true,
     values: {
       title,
       type: typeInput as CourseNodeTypeValue,
       description: description || null,
+      youtubeUrl,
+      youtubeVideoId,
     },
   };
 }

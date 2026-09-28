@@ -28,6 +28,9 @@ export interface CourseNodeData {
   type?: CourseNodeType;
   /** Null when absent (matches the database's nullable column). */
   description?: string | null;
+  /** YouTube metadata (Step 6 Part 6) — admin edit dialog pre-fill. */
+  youtubeUrl?: string | null;
+  youtubeVideoId?: string | null;
   duration?: string;
   itemCount?: number;
   completed?: boolean;

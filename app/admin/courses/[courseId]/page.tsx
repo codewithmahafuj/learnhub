@@ -57,6 +57,9 @@ export default async function AdminCourseEdit({ params }: CourseEditProps) {
       title: true,
       type: true,
       description: true,
+      // Step 6 Part 6: needed to pre-fill the admin YouTube field.
+      youtubeUrl: true,
+      youtubeVideoId: true,
       sortOrder: true,
     },
   });
