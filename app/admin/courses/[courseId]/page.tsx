@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
-import { BackLink } from "@/components/layout/back-link";
 import { CourseHeader } from "@/components/lms/course-header";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
 import { CourseForm } from "@/components/admin/course-form";
 import { CourseStructureEditor } from "@/components/admin/course-structure-editor";
+import { PublishPanel } from "@/components/admin/publish-panel";
 import { updateCourseAction } from "./actions";
+import { publishCourseAction, unpublishCourseAction } from "./publish-actions";
 import {
   createCourseNodeAction,
   updateCourseNodeAction,
@@ -67,6 +68,10 @@ export default async function AdminCourseEdit({ params }: CourseEditProps) {
 
   // Bind the course id server-side; the client never supplies it per request.
   const updateWithId = updateCourseAction.bind(null, course.id);
+  // Publish workflow (Step 6 Part 9): same server-side binding pattern as the
+  // details form — the client can only invoke, never alter, the course id.
+  const publishWithId = publishCourseAction.bind(null, course.id);
+  const unpublishWithId = unpublishCourseAction.bind(null, course.id);
   const createNodeWithCourse = createCourseNodeAction.bind(null, course.id);
   const updateNodeWithCourse = updateCourseNodeAction.bind(null, course.id);
   const deleteNodeWithCourse = deleteCourseNodeAction.bind(null, course.id);
@@ -78,21 +83,38 @@ export default async function AdminCourseEdit({ params }: CourseEditProps) {
   return (
     <PageContainer>
       <div className="space-y-6">
-        {/* Back navigation */}
-        <div>
-          <BackLink href="/admin/courses" label="Back to Course Hub" />
-        </div>
+        {/* Breadcrumb — Course Hub → the course itself (never the opaque id) */}
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+        >
+          <Link
+            href="/admin/courses"
+            className="inline-flex items-center gap-1.5 font-semibold transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-sm"
+          >
+            <ArrowLeft className="h-3 w-3" /> Course Hub
+          </Link>
+          <ChevronRight className="h-3 w-3 text-muted-foreground/50" aria-hidden />
+          <span
+            className="truncate max-w-[14rem] md:max-w-sm font-medium text-foreground/80"
+            title={course.title}
+          >
+            {course.title}
+          </span>
+        </nav>
 
-        {/* Edit Title Section Banner */}
+        {/* Edit Title Section Banner — status lives in the publish panel below */}
         <CourseHeader
-          badgeText={`Syllabus Manager · ${course.status}`}
           title={course.title}
           description="Construct course syllabus hierarchies, attach lessons, and drag-and-drop course video links."
-          action={
-            <Button className="w-full md:w-auto h-11 px-6 font-semibold gap-1.5" disabled>
-              <PlusCircle className="h-4 w-4" /> Add New Module
-            </Button>
-          }
+        />
+
+        {/* Publish workflow — explicit status control, independent of the details form */}
+        <PublishPanel
+          courseId={course.id}
+          status={course.status}
+          publishAction={publishWithId}
+          unpublishAction={unpublishWithId}
         />
 
         {/* Course details — shared form with the create flow, pre-filled */}
