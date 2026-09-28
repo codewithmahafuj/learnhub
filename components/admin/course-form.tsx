@@ -55,7 +55,7 @@ export function CourseForm({
           placeholder="e.g. Advanced TypeScript Deep Dive"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+          className="h-9 w-full px-3 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
         />
       </div>
 
@@ -72,6 +72,7 @@ export function CourseForm({
           onChange={(e) => setDescription(e.target.value)}
           className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
         />
+        {/* textarea keeps its natural multi-row height — only ring/border tokens standardized */}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -84,7 +85,7 @@ export function CourseForm({
             name="category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+            className="h-9 w-full px-3 bg-background border border-border/80 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
           >
             <option value="development">Web Development</option>
             <option value="design">UI/UX Design</option>
@@ -106,7 +107,7 @@ export function CourseForm({
                 placeholder="https://example.com/thumbnail.png"
                 value={thumbnailUrl}
                 onChange={(e) => setThumbnailUrl(e.target.value)}
-                className="w-full px-3 py-2 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                className="h-9 w-full px-3 bg-background border border-border/80 rounded-md text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
               />
             </div>
             <div className="h-9 w-9 rounded-md border border-border/80 bg-muted flex items-center justify-center shrink-0 text-muted-foreground">

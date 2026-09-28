@@ -305,33 +305,38 @@ export function CourseStructureEditor({
     } finally {
       setDeleting(false);
     }
-  };
-
+  };  // Compact, aligned action buttons (h-7 icon-only, tooltipped). Icon-only
+  // keeps the tree scannable; aria-labels preserve accessibility. The
+  // destructive variant is the design system's restrained tonal style.
   const renderNodeActions = (node: CourseNodeData) => (
     <>
       <Button
-        variant="outline"
-        size="sm"
-        className="text-xs font-semibold gap-1"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Add child under ${node.title}`}
+        title="Add child"
         onClick={() => openAddChild(node)}
       >
-        <Plus className="h-3 w-3" /> Add Child
+        <Plus className="h-3.5 w-3.5" />
       </Button>
       <Button
-        variant="outline"
-        size="sm"
-        className="text-xs font-semibold gap-1"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Edit ${node.title}`}
+        title="Edit"
         onClick={() => openEdit(node)}
       >
-        <Pencil className="h-3 w-3" /> Edit
-      </Button>
+        <Pencil className="h-3.5 w-3.5" />
+        </Button>
       <Button
-        variant="destructive"
-        size="sm"
-        className="text-xs font-semibold gap-1"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Delete ${node.title}`}
+        title="Delete"
+        className="text-muted-foreground/70 hover:bg-destructive/10 hover:text-destructive"
         onClick={() => setConfirmNode(node)}
       >
-        <Trash2 className="h-3 w-3" /> Delete
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </>
   );
@@ -382,12 +387,17 @@ export function CourseStructureEditor({
   return (
     <>
       <div className="flex justify-end pb-3">
-        <Button variant="outline" className="h-9 gap-1.5 text-xs font-semibold" onClick={openAddRoot}>
-          <Plus className="h-4 w-4" /> Add Root Item
+        <Button variant="ghost" className="h-8 gap-1.5 text-xs font-semibold" onClick={openAddRoot}>
+          <Plus className="h-3.5 w-3.5" /> Add Root Item
         </Button>
       </div>
 
       <DndContext
+        // Keep dnd-kit accessibility IDs stable across SSR and hydration.
+        // Without an explicit id, @dnd-kit/core uses a module-level counter,
+        // which can produce different aria-describedby values on the server
+        // and in the browser.
+        id="course-structure-editor"
         sensors={sensors}
         collisionDetection={collisionDetection}
         modifiers={[restrictToVerticalAxis]}
