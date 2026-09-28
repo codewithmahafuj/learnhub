@@ -22,6 +22,11 @@ export interface CourseTreeProps {
    * editor supplies these; the student-facing tree omits them entirely.
    */
   dnd?: CourseNodeDndSlots;
+  /**
+   * Student lesson selection (Step 6 Part 7) — threaded into every node.
+   * See CourseNodeProps.onSelectNode.
+   */
+  onSelectNode?: (node: CourseNodeData) => void;
 }
 
 export function CourseTree({
@@ -30,6 +35,7 @@ export function CourseTree({
   className,
   renderNodeActions,
   dnd,
+  onSelectNode,
 }: CourseTreeProps) {
   return (
     <div className={cn("space-y-4", className)}>
@@ -46,6 +52,7 @@ export function CourseTree({
             depth={0}
             dnd={dnd}
             renderNodeActions={renderNodeActions}
+            onSelectNode={onSelectNode}
           />
         ))}
       </div>

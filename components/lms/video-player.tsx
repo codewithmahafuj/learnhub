@@ -3,53 +3,72 @@ import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface VideoPlayerProps {
-  title?: string;
-  lessonNumber?: string;
-  description?: string;
+  /**
+   * VALIDATED YouTube video id (server-derived via lib/youtube.ts).
+   * The embed URL is always built here from this id — never from raw user
+   * input — so no arbitrary iframe URL can be injected. Null renders the
+   * informative empty state instead of an iframe.
+   */
+  videoId: string | null;
+  /** Selected lesson title (also used as the iframe's accessible title). */
+  title: string;
+  /** Optional lesson description shown under the player. */
+  description?: string | null;
+  /** Empty-state text when videoId is null. */
+  emptyTitle?: string;
+  emptyDescription?: string;
   className?: string;
 }
 
 export function VideoPlayer({
-  title = "Project Scaffolding Fundamentals",
-  lessonNumber = "Lecture 1.1",
+  videoId,
+  title,
   description,
+  emptyTitle = "No video available",
+  emptyDescription = "This item doesn't have a video yet.",
   className,
 }: VideoPlayerProps) {
   return (
     <div className={cn("space-y-6 max-w-4xl mx-auto w-full", className)}>
-      {/* Aspect Video Embed Player Placeholder */}
-      <div className="aspect-video w-full bg-neutral-900 border border-neutral-800 rounded-xl flex flex-col items-center justify-center text-neutral-400 relative overflow-hidden group shadow-md">
-        <div className="absolute inset-0 bg-radial-at-c from-neutral-800/20 to-neutral-950/90 pointer-events-none" />
-        <div className="w-16 h-16 bg-primary text-primary-foreground rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer shadow-lg z-10">
-          <Play className="h-8 w-8 fill-current ml-1" />
-        </div>
-        <span className="text-xs font-semibold text-neutral-500 mt-4 tracking-wide uppercase select-none z-10">
-          Embedded Video Player Hub Placeholder
-        </span>
+      {/* Responsive 16:9 player (or informative empty state) */}
+      <div className="aspect-video w-full overflow-hidden rounded-xl border border-border/60 bg-neutral-950 shadow-md">
+        {videoId ? (
+          <iframe
+            // The id is server-validated ([A-Za-z0-9_-]{11}) — interpolated
+            // into a fixed youtube-nocookie embed path only.
+            src={`https://www.youtube-nocookie.com/embed/${videoId}?rel=0`}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="h-full w-full"
+          />
+        ) : (
+          <div className="h-full w-full flex flex-col items-center justify-center text-neutral-400 gap-3 p-6 text-center">
+            <div className="w-14 h-14 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center">
+              <Play className="h-6 w-6 ml-0.5" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-neutral-300">{emptyTitle}</p>
+              <p className="text-xs text-neutral-500 max-w-sm">{emptyDescription}</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Lesson Metadata Footer */}
-      {(title || description || lessonNumber) && (
-        <div className="space-y-3 pb-12">
-          <div className="space-y-1">
-            {lessonNumber && (
-              <span className="text-[10px] font-bold tracking-wider uppercase text-primary">
-                {lessonNumber}
-              </span>
-            )}
-            {title && (
-              <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
-                {title}
-              </h2>
-            )}
-          </div>
-          {description && (
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {description}
-            </p>
-          )}
+      {/* Lesson metadata */}
+      <div className="space-y-3 pb-6 md:pb-12">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+            {title}
+          </h2>
         </div>
-      )}
+        {description && (
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {description}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
